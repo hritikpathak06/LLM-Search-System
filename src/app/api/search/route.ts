@@ -32,8 +32,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
     }
 
-    console.log("Query==>> ", query);
-
     const { soundex, metaphone, transliterated } = generatePhoneticKeys(query);
     console.log("Phonetic Keys:", { soundex, metaphone, transliterated });
 
@@ -41,39 +39,60 @@ export async function GET(req: NextRequest) {
       $or: [
         { phoneticKeys: { $in: [soundex, metaphone, transliterated] } },
         { variations: { $regex: query, $options: "i" } },
+        { canonicalName: query },
       ],
     });
 
     if (match) {
-      if (!match.variations.includes(query)) match.variations.push(query);
-      if (!match.phoneticKeys.includes(soundex))
+      let updated = false;
+      if (!match.variations.includes(query)) {
+        match.variations.push(query);
+        updated = true;
+      }
+      if (!match.phoneticKeys.includes(soundex)) {
         match.phoneticKeys.push(soundex);
-      if (!match.phoneticKeys.includes(metaphone))
+        updated = true;
+      }
+      if (!match.phoneticKeys.includes(metaphone)) {
         match.phoneticKeys.push(metaphone);
-
+        updated = true;
+      }
       match.canonicalName = query;
-      await match.save();
+      if (updated) {
+        await match.save();
+        console.log("Updated existing match:", match);
+      }
 
       return NextResponse.json({ message: "Updated existing match", match });
     }
 
     const llmResponse = await callLLM(query);
-    console.log("LLM Response==>> ", llmResponse);
+    console.log("LLM Response ==>>", llmResponse);
 
-    if (llmResponse !== "new_entity") {
+    if (llmResponse.match !== "new_entity") {
       let existing = await Normalization.findOne({
-        canonicalName: llmResponse,
+        canonicalName: llmResponse.match,
       });
 
       if (existing) {
-        if (!existing.variations.includes(query))
+        let updated = false;
+        if (!existing.variations.includes(query)) {
           existing.variations.push(query);
-        if (!existing.phoneticKeys.includes(soundex))
+          updated = true;
+        }
+        if (!existing.phoneticKeys.includes(soundex)) {
           existing.phoneticKeys.push(soundex);
-        if (!existing.phoneticKeys.includes(metaphone))
+          updated = true;
+        }
+        if (!existing.phoneticKeys.includes(metaphone)) {
           existing.phoneticKeys.push(metaphone);
-        existing.canonicalName = query;
-        await existing.save();
+          updated = true;
+        }
+
+        if (updated) {
+          await existing.save();
+          console.log("Updated LLM-matched record:", existing);
+        }
 
         return NextResponse.json({
           message: "Updated existing LLM-matched record",
@@ -82,16 +101,28 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const variations = [query, ...(llmResponse.variations || [])];
+    const phoneticKeys = new Set<string>();
+    variations.forEach((variant) => {
+      const { soundex, metaphone, transliterated } =
+        generatePhoneticKeys(variant);
+      phoneticKeys.add(soundex);
+      phoneticKeys.add(metaphone);
+      phoneticKeys.add(transliterated);
+    });
+
     const newEntry = await Normalization.create({
       canonicalName: query,
-      variations: [query],
-      phoneticKeys: [soundex, metaphone, transliterated],
-      category: "unknown",
+      variations,
+      phoneticKeys: Array.from(phoneticKeys),
+      category: llmResponse.category || "general",
     });
+
+    console.log("Created new entry:", newEntry);
 
     return NextResponse.json({ message: "Created new entry", match: newEntry });
   } catch (error) {
-    console.log("Error==>> ", error);
+    console.error("Error ==>> ", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
