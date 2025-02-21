@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import i18n from "../i18n"; 
+import i18n from "../i18n";
 
 export default function Search() {
   const { t } = useTranslation();
@@ -40,7 +40,7 @@ export default function Search() {
           onClick={toggleLanguage}
           className="px-4 py-2 mb-4 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition"
         >
-          {t("toggle_language")}
+          {lang === "en" ? "Switch to Hebrew" : "Switch to English"}
         </button>
 
         <div className="relative w-full">
@@ -50,6 +50,10 @@ export default function Search() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("placeholder")}
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            dir={lang === "he" ? "rtl" : "ltr"}
+            lang={lang}
+            autoFocus
+            autoComplete="off"
           />
         </div>
 

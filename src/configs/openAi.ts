@@ -1,13 +1,10 @@
 import { OpenAI } from "openai";
-import { metaphone } from "metaphone";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export const generatePhoneticKey = (text: any) => {
-  return metaphone(text);
-};
+
 
 export const callLLM = async (prompt: string) => {
   try {

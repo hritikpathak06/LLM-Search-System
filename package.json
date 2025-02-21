@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "axios": "^1.7.9",
+    "hebrew-transliteration": "^2.8.0",
     "i18next": "^24.2.2",
     "metaphone": "^2.0.1",
     "mongoose": "^8.10.1",
@@ -20,7 +21,8 @@
     "phonetics": "^1.0.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-i18next": "^15.4.1"
+    "react-i18next": "^15.4.1",
+    "soundex-code": "^2.0.1"
   },
   "devDependencies": {
     "@types/node": "^20",
